@@ -1,5 +1,5 @@
 *.swp
 .idea
 .pyc
-venv
 config.yml
+TODO.md
