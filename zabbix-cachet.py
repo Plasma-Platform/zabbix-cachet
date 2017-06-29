@@ -83,6 +83,23 @@ class Zabbix:
             return zbx_event[-1]
         return zbx_event
 
+    def get_itservice_by_name(self, trigger_name):
+        """Get IT Service by name
+
+        Args:
+            trigger_name (String): Name of service
+
+        Returns:
+            Dict: IT Service object
+        """
+        service = self.zapi.service.get(
+            filter={'name': trigger_name}
+        )
+        try:
+            return service[0]
+        except IndexError:
+            return []
+
     def get_itservices(self, root=None):
         """
         Return tree of Zabbix IT Services
@@ -431,8 +448,7 @@ class Cachet:
         return data
 
     def get_metrics(self):
-        url = 'metrics'
-        self._http_get(self)
+        pass
 
     def create_metrics(self, **kwargs):
         url = 'metrics'
@@ -595,6 +611,11 @@ def triggers_watcher_worker(service_map, interval, e):
     logging.info('end trigger watcher')
 
 
+def init_metrics(service_names):
+    services = [zapi.get_itservice_by_name(name) for name in service_names]
+    metrics = cachet.get_metrics()
+
+
 def init_cachet(services):
     """
     Init Cachet by syncing Zabbix service to it
@@ -708,6 +729,9 @@ if __name__ == '__main__':
         )
 
         zbxtr2cachet = ''
+
+        metrics_mapping = init_metrics(SETTINGS['metrics_services'])
+        metric_update_t = threading.Thread()
 
         while True:
             logging.debug('Getting list of Zabbix IT Services ...')
