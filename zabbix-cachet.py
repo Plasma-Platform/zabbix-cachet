@@ -98,7 +98,7 @@ class Zabbix:
         try:
             return service[0]
         except IndexError:
-            return []
+            return {}
 
     def get_itservices(self, root=None):
         """
@@ -448,7 +448,16 @@ class Cachet:
         return data
 
     def get_metrics(self):
-        pass
+        url = 'metrics'
+        response = self._http_get(url)
+        pag_info = response['meta']['pagination']
+
+        # If we didn't get all objects - try again
+        if pag_info['total_pages'] > 1:
+            # Get objects from a big pagination page
+            return self._http_get(url, {'per_page': pag_info['total']})['data']
+
+        return response['data']
 
     def create_metrics(self, **kwargs):
         url = 'metrics'
@@ -612,8 +621,30 @@ def triggers_watcher_worker(service_map, interval, e):
 
 
 def init_metrics(service_names):
+    """Create a mapping array between Zabbix services and Cachet metrics
+
+    Args:
+        service_names (List): list of service names
+    Returns:
+        List: List of dicts which assign for every service own metric
+    """
+
+    # List of services that should be tracked
+    for name in service_names:
+        pass
+
+
     services = [zapi.get_itservice_by_name(name) for name in service_names]
+    # List of all metrics
     metrics = cachet.get_metrics()
+
+    print(json.dumps(services, indent=2), '\n', json.dumps(metrics, indent=2))
+
+    for service in services:
+        try:
+            service['name']
+        except KeyError:
+            logging.error('')
 
 
 def init_cachet(services):
