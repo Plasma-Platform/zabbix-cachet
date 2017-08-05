@@ -620,32 +620,71 @@ def triggers_watcher_worker(service_map, interval, e):
     logging.info('end trigger watcher')
 
 
+def metrics_updater(metrics_mapping, interval):
+    pass
+
+
+def metrics_updater_worker(metrics_mapping, interval):
+    logging.info('Start metrics updater')
+    while True:
+        logging.debug('Getting SLA of Zabbix services and send to Cachet')
+        metrics_updater(metrics_mapping, interval)
+        time.sleep(interval)
+
+
 def init_metrics(service_names):
     """Create a mapping array between Zabbix services and Cachet metrics
 
     Args:
-        service_names (List): list of service names
+        service_names (list): list of service names
     Returns:
-        List: List of dicts which assign for every service own metric
+        list: List of dicts which assign for every service own metric
     """
 
     # List of services that should be tracked
+    services = []
     for name in service_names:
-        pass
+        service = zapi.get_itservice_by_name(name)
+        if service:
+            services.append(service)
+        elif service and service['showsla'] == '0':
+            logging.error("Zabbix service with name '{name}' does not setting "
+                          "up to show SLA.".format(name=name))
+        else:
+            logging.error("Zabbix service with name '{name}' does not found! "
+                          "Please, check your config"
+                          .format(name=name))
 
-
-    services = [zapi.get_itservice_by_name(name) for name in service_names]
     # List of all metrics
     metrics = cachet.get_metrics()
 
-    print(json.dumps(services, indent=2), '\n', json.dumps(metrics, indent=2))
-
+    metrics_mapping = []
     for service in services:
-        try:
-            service['name']
-        except KeyError:
-            logging.error('')
+        result = list(filter(
+            lambda x: service['name'] + ' Uptime' == x['name'],
+            metrics
+        ))
 
+        # If metric was found for current service - choose it
+        if result:
+            result = result[0]
+        # if not - create a new metric
+        else:
+            result = cachet.create_metrics(
+                name='{service} Uptime'.format(service=service['name']),
+                description= 'Uptime chart for {service} service'.format(
+                    service = service['name']
+                ),
+                suffix='Percent',
+                default_value=0,
+            )['data']
+
+        metrics_mapping.append({
+            'service_id': service['serviceid'],
+            'metric_id': result['id']
+        })
+
+    return metrics_mapping
 
 def init_cachet(services):
     """
@@ -761,8 +800,18 @@ if __name__ == '__main__':
 
         zbxtr2cachet = ''
 
-        metrics_mapping = init_metrics(SETTINGS['metrics_services'])
-        metric_update_t = threading.Thread()
+        # Create mapping between metrics and IT services
+        metrics_mapping = init_metrics(SETTINGS['metric_services'])
+
+        # Run metric updater
+        metric_update_t = threading.Thread(
+            name='Metrics Updater',
+            target=metrics_updater_worker,
+            args=(metrics_mapping, SETTINGS['update_metric_interval'])
+        )
+
+        metric_update_t.daemon = True
+        metric_update_t.start()
 
         while True:
             logging.debug('Getting list of Zabbix IT Services ...')
