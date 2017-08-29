@@ -17,9 +17,7 @@ settings:
   # Leave it empty if you want to use /
   root_service: 'Saritasa'
   # IT Services, which SLA will be exported in Cachet metrics
-  metric_services:
-    'Resources'
-    'Routers'
+  metric_services: ['Resources', 'Routers']
 
   # TIMING
 
