@@ -136,7 +136,7 @@ class Cachet:
             if len(components['data']) < 1:
                 return {'id': 0, 'name': 'Does not exists'}
             elif len(components['data']) == 1:
-                return components['data'][0]
+                return components
         return data
 
     def new_components(self, name, **kwargs):
@@ -160,7 +160,7 @@ class Cachet:
         # There are more that one component with same name already
         if 'data' in component:
             for i in component['data']:
-                if i['group_id'] == params['group_id']:
+                if i['group_id'] == params['group_id'] or (i['group_id'] > 0 and params['group_id'] == 0):
                     return i
             else:
                 component = {'id': 0}
