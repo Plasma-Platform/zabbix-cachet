@@ -248,6 +248,9 @@ def init_metrics(service_names):
                 ),
                 suffix='Percent',
                 default_value=0,
+                calc_type=1,
+                threshold=1,
+                places=0
             )['data']
 
         metrics_mapping.append({

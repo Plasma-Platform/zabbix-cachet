@@ -15,18 +15,18 @@ settings:
 
   # IT Service which will be a root for Cachet Components
   # Leave it empty if you want to use /
-  root_service: 'Saritasa'
+  root_service: ''
   # IT Services, which SLA will be exported in Cachet metrics
   metric_services: ['Resources', 'Routers']
 
   # TIMING
 
   # How often check Zabbix for new incidents
-  update_inc_interval: 10  # in seconds
+  update_inc_interval: 60  # in seconds
   # How often check Zabbix for new IT Services
   update_comp_interval: 60  # in seconds
   # How often update metrics in Cachet
-  update_metric_interval: 30
+  update_metric_interval: 300
 
   # LOGGING
 
