@@ -4,6 +4,7 @@ ENV REFRESHED_AT 2017013001
 ENV CONFIG_FILE /config.yml
 COPY requirements.txt /zabbix-cachet/requirements.txt
 COPY zabbix-cachet.py /zabbix-cachet/zabbix-cachet.py
+COPY api/* /zabbix-cachet/api/
 RUN pip3 install -r /zabbix-cachet/requirements.txt
 WORKDIR /opt/
 
