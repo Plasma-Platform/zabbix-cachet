@@ -119,25 +119,23 @@ class Cachet:
         data = self._http_get(url)
         return data
 
-    def get_components(self, name=None):
+    def get_component_by_name(self, name=None):
         """
-        Get all registered components or return a component details
+        Get registered component or return id=0
         if name specified
         @param name: string
-        @return: dict of data or list
+        @return: dict
         """
         url = 'components'
         data = self._http_get(url)
         if name:
-            components = {'data': []}
-            for component in data['data']:
-                if component['name'] == name:
-                    components['data'].append(component)
-            if len(components['data']) < 1:
-                return {'id': 0, 'name': 'Does not exists'}
-            elif len(components['data']) == 1:
-                return components
-        return data
+            total_pages = int(data['meta']['pagination']['total_pages'])
+            for page in range(total_pages, 0, -1):
+                data = self._http_get(url,{'page': page})
+                for component in data['data']:
+                    if component['name'] == name:
+                        return component;
+        return {'id': 0, 'name': 'Does not exists'}
 
     def new_components(self, name, **kwargs):
         """
@@ -156,14 +154,7 @@ class Cachet:
         }
         params.update(kwargs)
         # Check if components with same name already exists in same group
-        component = self.get_components(name)
-        # There are more that one component with same name already
-        if 'data' in component:
-            for i in component['data']:
-                if i['group_id'] == params['group_id'] or (i['group_id'] > 0 and params['group_id'] == 0):
-                    return i
-            else:
-                component = {'id': 0}
+        component = self.get_component_by_name(name)
 
         # Create component if it does not exist or exist in other group
         if component['id'] == 0 or component['group_id'] != params['group_id']:
