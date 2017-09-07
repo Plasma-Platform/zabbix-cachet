@@ -130,7 +130,7 @@ class Cachet:
         data = self._http_get(url)
         if name:
             total_pages = int(data['meta']['pagination']['total_pages'])
-            for page in range(0,total_pages):
+            for page in range(1,total_pages+1):
                 data = self._http_get(url,{'page': page})
                 for component in data['data']:
                     if component['name'] == name:
