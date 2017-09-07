@@ -195,9 +195,9 @@ def metrics_updater(metrics_mapping, interval):
 
     logging.info("SLA was updated.")
 
-def metrics_updater_worker(metrics_mapping, interval):
+def metrics_updater_worker(metrics_mapping, interval, e):
     logging.info('Start metrics updater')
-    while True:
+    while not e.is_set():
         logging.debug('Getting SLA of Zabbix services and send to Cachet')
         metrics_updater(metrics_mapping, interval)
         time.sleep(interval)
@@ -214,7 +214,8 @@ def init_metrics(service_names):
 
     # List of services that should be tracked
     services = []
-    for name in service_names:
+    for zbx_service in service_names:
+        name = zbx_service['name']
         service = zapi.get_itservice_by_name(name)
         if service:
             services.append(service)
@@ -260,6 +261,9 @@ def init_metrics(service_names):
 
     return metrics_mapping
 
+def get_order(service):
+    return int(service['serviceid']) + int(service['sortorder'])*1000
+
 def init_cachet(services):
     """
     Init Cachet by syncing Zabbix service to it
@@ -273,7 +277,7 @@ def init_cachet(services):
         # Check if zbx_service has childes
         zxb2cachet_i = {}
         if zbx_service['dependencies']:
-            group = cachet.new_components_gr(zbx_service['name'])
+            group = cachet.new_components_gr(zbx_service['name'], get_order(zbx_service))
             for dependency in zbx_service['dependencies']:
                 # Component without trigger
                 if int(dependency['triggerid']) != 0:
@@ -313,7 +317,8 @@ def init_cachet(services):
                 component = cachet.new_components(
                     zbx_service['name'],
                     link=trigger['url'],
-                    description=trigger['description']
+                    description=trigger['description'],
+                    order=get_order(zbx_service)
                 )
                 # Create a map of Zabbix Trigger <> Cachet IDs
                 zxb2cachet_i = {'triggerid': zbx_service['triggerid'],
@@ -357,6 +362,7 @@ if __name__ == '__main__':
     logging.getLogger("requests").setLevel(log_level_requests)
     logging.info('Zabbix Cachet v.{} started'.format(__version__))
     inc_update_t = threading.Thread()
+    metric_update_t = threading.Thread()
     event = threading.Event()
     try:
         zapi = Zabbix(
@@ -373,19 +379,6 @@ if __name__ == '__main__':
         )
 
         zbxtr2cachet = ''
-
-        # Create mapping between metrics and IT services
-        metrics_mapping = init_metrics(SETTINGS['metric_services'])
-
-        # Run metric updater
-        metric_update_t = threading.Thread(
-            name='Metrics Updater',
-            target=metrics_updater_worker,
-            args=(metrics_mapping, SETTINGS['update_metric_interval'])
-        )
-
-        metric_update_t.daemon = True
-        metric_update_t.start()
 
         while True:
             logging.debug('Getting list of Zabbix IT Services ...')
@@ -417,6 +410,10 @@ if __name__ == '__main__':
                 # Wait until tread die
                 while inc_update_t.is_alive():
                     time.sleep(1)
+                logging.info('Stopped inc_update_t')
+                while metric_update_t.is_alive():
+                    time.sleep(1)
+                logging.info('Stopped metric_update_t')
                 event.clear()
 
                 inc_update_t = threading.Thread(
@@ -427,6 +424,19 @@ if __name__ == '__main__':
 
                 inc_update_t.daemon = True
                 inc_update_t.start()
+
+                # Create mapping between metrics and IT services
+                metrics_mapping = init_metrics(itservices)
+
+                # Run metric updater
+                metric_update_t = threading.Thread(
+                    name='Metrics Updater',
+                    target=metrics_updater_worker,
+                    args=(metrics_mapping, SETTINGS['update_metric_interval'], event)
+                )
+
+                metric_update_t.daemon = True
+                metric_update_t.start()
             time.sleep(SETTINGS['update_comp_interval'])
     except KeyboardInterrupt:
         event.set()

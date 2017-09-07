@@ -16,8 +16,6 @@ settings:
   # IT Service which will be a root for Cachet Components
   # Leave it empty if you want to use /
   root_service: ''
-  # IT Services, which SLA will be exported in Cachet metrics
-  metric_services: ['Resources', 'Routers']
 
   # TIMING
 

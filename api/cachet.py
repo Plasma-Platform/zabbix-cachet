@@ -130,7 +130,7 @@ class Cachet:
         data = self._http_get(url)
         if name:
             total_pages = int(data['meta']['pagination']['total_pages'])
-            for page in range(total_pages, 0, -1):
+            for page in range(0,total_pages):
                 data = self._http_get(url,{'page': page})
                 for component in data['data']:
                     if component['name'] == name:
@@ -150,7 +150,8 @@ class Cachet:
             'link': '',
             'description': '',
             'status': '1',
-            'group_id': 0
+            'group_id': 0,
+            'order': 0
         }
         params.update(kwargs)
         # Check if components with same name already exists in same group
@@ -212,10 +213,11 @@ class Cachet:
                 return {'id': 0, 'name': 'Does not exists'}
         return data
 
-    def new_components_gr(self, name):
+    def new_components_gr(self, name, order):
         """
         Create new components group
         @param name: string
+        @param order: string
         @return: dict of data
         """
         # Check if component's group already exists
@@ -223,7 +225,7 @@ class Cachet:
         if componenets_gr_id['id'] == 0:
             url = 'components/groups'
             # TODO: make if possible to configure default collapsed value
-            params = {'name': name, 'collapsed': 2}
+            params = {'name': name, 'collapsed': 2, 'order': order}
             logging.debug(
                 'Creating Component Group {}...'.format(params['name'])
             )
